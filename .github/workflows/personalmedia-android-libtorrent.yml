@@ -1,0 +1,147 @@
+name: PersonalMedia STR-5C - Android libtorrent dependencies
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "Build ARM64 first, or all four Android ABIs"
+        type: choice
+        required: true
+        default: arm64-only
+        options:
+          - arm64-only
+          - all-four
+      vcpkg_revision:
+        description: "vcpkg revision (master or a specific commit SHA)"
+        type: string
+        required: true
+        default: master
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: Android \${{ matrix.abi }} (API 26)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        abi: \${{ fromJSON(inputs.targets == 'all-four' && '["arm64-v8a","armeabi-v7a","x86","x86_64"]' || '["arm64-v8a"]') }}
+    steps:
+      - name: Checkout private build repository
+        uses: actions/checkout@v4
+
+      - name: Linux build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential autoconf automake libtool pkg-config ninja-build cmake zip unzip curl git python3 perl nasm
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Android NDK 27
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install 'ndk;27.0.12077973'
+          NDK="$ANDROID_SDK_ROOT/ndk/27.0.12077973"
+          test -f "$NDK/build/cmake/android.toolchain.cmake"
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$NDK" >> "$GITHUB_ENV"
+          "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++" --version | head -2
+
+      - name: Bootstrap vcpkg
+        shell: bash
+        env:
+          VCPKG_REF: \${{ inputs.vcpkg_revision }}
+        run: |
+          set -euo pipefail
+          git clone --quiet https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          git -C "$RUNNER_TEMP/vcpkg" checkout --quiet "$VCPKG_REF"
+          git -C "$RUNNER_TEMP/vcpkg" rev-parse HEAD | tee "$RUNNER_TEMP/vcpkg-commit.txt"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+          echo "VCPKG_DISABLE_METRICS=1" >> "$GITHUB_ENV"
+
+      - name: Build real libtorrent, Boost, OpenSSL for Android
+        shell: bash
+        env:
+          ABI: \${{ matrix.abi }}
+          VCPKG_MAX_CONCURRENCY: '2'
+        run: |
+          set -euo pipefail
+          case "$ABI" in
+            arm64-v8a) triplet=pm-arm64-android; arch=arm64; host=aarch64-linux-android ;;
+            armeabi-v7a) triplet=pm-arm-neon-android; arch=arm; host=armv7a-linux-androideabi ;;
+            x86) triplet=pm-x86-android; arch=x86; host=i686-linux-android ;;
+            x86_64) triplet=pm-x64-android; arch=x64; host=x86_64-linux-android ;;
+            *) exit 2 ;;
+          esac
+          mkdir -p "$RUNNER_TEMP/pm-triplets"
+          cat > "$RUNNER_TEMP/pm-triplets/$triplet.cmake" <<TRIPLET
+          set(VCPKG_TARGET_ARCHITECTURE $arch)
+          set(VCPKG_CRT_LINKAGE static)
+          set(VCPKG_LIBRARY_LINKAGE static)
+          set(VCPKG_CMAKE_SYSTEM_NAME Android)
+          set(VCPKG_CMAKE_SYSTEM_VERSION 26)
+          set(VCPKG_MAKE_BUILD_TRIPLET "--host=$host")
+          set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=$ABI)
+          TRIPLET
+          if [ "$ABI" = "armeabi-v7a" ]; then
+            echo 'set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DANDROID_ABI=armeabi-v7a -DANDROID_ARM_NEON=ON)' >> "$RUNNER_TEMP/pm-triplets/$triplet.cmake"
+          fi
+          echo "Build $ABI / $triplet / Android API 26 / c++_static"
+          "$VCPKG_ROOT/vcpkg" install "libtorrent[core]:$triplet" "--overlay-triplets=$RUNNER_TEMP/pm-triplets" --disable-metrics
+          export ABI TRIPLET="$triplet" PREFIX="$VCPKG_ROOT/installed/$triplet" OUT="$GITHUB_WORKSPACE/dist"
+          export VCPKG_SHA="$(cat "$RUNNER_TEMP/vcpkg-commit.txt")"
+          python3 - <<'PYTHON'
+          import hashlib, json, os, sys, zipfile
+          from pathlib import Path
+          prefix=Path(os.environ['PREFIX'])
+          abi=os.environ['ABI']
+          triplet=os.environ['TRIPLET']
+          files=[
+              prefix/'include/libtorrent/session.hpp',
+              prefix/'lib/libssl.a',
+              prefix/'lib/libcrypto.a',
+          ]
+          torrent=list((prefix/'lib').glob('*torrent*.a'))
+          configs=[p for p in (prefix/'share').rglob('*') if p.is_file() and p.name.lower()=='libtorrentrasterbarconfig.cmake']
+          if not torrent or not configs or any(not f.is_file() for f in files):
+              sys.exit('Not a complete libtorrent/OpenSSL Android package')
+          for file in torrent+files[1:]:
+              if file.open('rb').read(8) not in (b'!<arch>\n',b'!<thin>\n'):
+                  sys.exit('Invalid real static library: '+str(file))
+          metadata={'artifact_schema':1,'project':'PersonalMedia-STR5C','abi':abi,
+                    'triplet':triplet,'android_api':26,'android_ndk':'27.0.12077973',
+                    'cxx_stl':'c++_static','dependency_source':'microsoft/vcpkg',
+                    'vcpkg_commit':os.environ['VCPKG_SHA']}
+          out=Path(os.environ['OUT'])
+          out.mkdir(exist_ok=True)
+          filename=f'pm-libtorrent-{abi}.zip'
+          target=out/filename
+          with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
+              z.writestr(f'{triplet}/PM_STR5C_BUILD_INFO.json',json.dumps(metadata,indent=2))
+              for file in sorted(prefix.rglob('*')):
+                  if file.is_file() and file.name!='PM_STR5C_BUILD_INFO.json':
+                      if file.is_symlink() and prefix not in file.resolve().parents:
+                          sys.exit('External symlink refused: '+str(file))
+                      z.write(file,f'{triplet}/{file.relative_to(prefix).as_posix()}')
+          digest=hashlib.sha256(target.read_bytes()).hexdigest()
+          (out/(filename+'.sha256')).write_text(f'{digest}  {filename}\n')
+          print('Artifact:',target,'SHA256:',digest)
+          PYTHON
+
+      - name: Publish dependency ZIP with SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: PersonalMedia-libtorrent-\${{ matrix.abi }}
+          path: |
+            dist/pm-libtorrent-\${{ matrix.abi }}.zip
+            dist/pm-libtorrent-\${{ matrix.abi }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
