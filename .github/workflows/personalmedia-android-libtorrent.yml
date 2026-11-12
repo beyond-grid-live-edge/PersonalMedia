@@ -22,14 +22,14 @@ permissions:
 
 jobs:
   dependencies:
-    name: Android \${{ matrix.abi }} (API 26)
+    name: Android ${{ matrix.abi }} (API 26)
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        abi: \${{ fromJSON(inputs.targets == 'all-four' && '["arm64-v8a","armeabi-v7a","x86","x86_64"]' || '["arm64-v8a"]') }}
+        abi: ${{ fromJSON(inputs.targets == 'all-four' && '["arm64-v8a","armeabi-v7a","x86","x86_64"]' || '["arm64-v8a"]') }}
     steps:
       - name: Checkout private build repository
         uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
       - name: Bootstrap vcpkg
         shell: bash
         env:
-          VCPKG_REF: \${{ inputs.vcpkg_revision }}
+          VCPKG_REF: ${{ inputs.vcpkg_revision }}
         run: |
           set -euo pipefail
           git clone --quiet https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
@@ -69,7 +69,7 @@ jobs:
       - name: Build real libtorrent, Boost, OpenSSL for Android
         shell: bash
         env:
-          ABI: \${{ matrix.abi }}
+          ABI: ${{ matrix.abi }}
           VCPKG_MAX_CONCURRENCY: '2'
         run: |
           set -euo pipefail
@@ -138,10 +138,10 @@ jobs:
       - name: Publish dependency ZIP with SHA-256
         uses: actions/upload-artifact@v4
         with:
-          name: PersonalMedia-libtorrent-\${{ matrix.abi }}
+          name: PersonalMedia-libtorrent-${{ matrix.abi }}
           path: |
-            dist/pm-libtorrent-\${{ matrix.abi }}.zip
-            dist/pm-libtorrent-\${{ matrix.abi }}.zip.sha256
+            dist/pm-libtorrent-${{ matrix.abi }}.zip
+            dist/pm-libtorrent-${{ matrix.abi }}.zip.sha256
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
