@@ -117,6 +117,9 @@ private fun PersonalMediaApp(chooseFiles: (String?, (List<Uri>) -> Unit) -> Unit
     saveDiagnostics: ((Uri) -> Unit) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Keep the interface locale separate from media track and artwork metadata preferences.
+    val uiLanguageStore = remember { PmUiLanguageStore(context.applicationContext) }
+    var uiLanguage by remember { mutableStateOf(uiLanguageStore.read()) }
     val preferencesStore = remember { PlaybackPreferencesStore(context.applicationContext) }
     var playbackPreferences by remember { mutableStateOf(preferencesStore.read()) }
     val artworkSettingsStore = remember { ArtworkPreferencesStore(context.applicationContext) }
@@ -472,6 +475,7 @@ private fun PersonalMediaApp(chooseFiles: (String?, (List<Uri>) -> Unit) -> Unit
         // The Stremio player captures the previous session's native cleanup callback.
         torrentPlayback = false
     }
+    CompositionLocalProvider(LocalPmUiLanguage provides uiLanguage) {
     MaterialTheme(colorScheme = darkColorScheme(primary = accent, background = bg,
         surface = panel, onBackground = Color.White, onSurface = Color.White)) {
         if (playing.isNotEmpty() && stremioDirect != null) {
@@ -584,6 +588,10 @@ private fun PersonalMediaApp(chooseFiles: (String?, (List<Uri>) -> Unit) -> Unit
                         }
                         "Settings" -> SettingsScreen(
                             count = localItems.size, loggedIn = client.loggedIn,
+                            uiLanguage = uiLanguage,
+                            onUiLanguageChange = { selected ->
+                                if (uiLanguageStore.save(selected)) uiLanguage = selected
+                            },
                             backupStatus = backupStatus, backupBusy = backupBusy,
                             backupCandidate = backupCandidate, backupUndoAvailable = backupUndoAvailable,
                             onExportBackup = ::exportPersonalMediaBackup,
@@ -680,6 +688,7 @@ private fun PersonalMediaApp(chooseFiles: (String?, (List<Uri>) -> Unit) -> Unit
             }
         }
     }
+    }
 }
 
 @Composable
@@ -744,6 +753,7 @@ private fun SettingsRow(label: String, result: String) {
 
 @Composable
 private fun SettingsScreen(count: Int, loggedIn: Boolean,
+    uiLanguage: String, onUiLanguageChange: (String) -> Unit,
     backupStatus: String, backupBusy: Boolean,
     backupCandidate: PersonalMediaBackupCandidate?, backupUndoAvailable: Boolean,
     onExportBackup: () -> Unit, onInspectBackup: () -> Unit,
@@ -823,6 +833,17 @@ private fun SettingsScreen(count: Int, loggedIn: Boolean,
                     onCheckedChange = { onPlaybackPreferencesChange(playbackPreferences.copy(keepScreenAwake = it)) })
             }
             Text("Keeps the screen awake while the player is on screen. Android handles the normal timeout after closing playback.",
+                color = muted, style = MaterialTheme.typography.bodySmall)
+        }
+        SettingsBlock("INTERFACE LANGUAGE", "PersonalMedia display language") {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = uiLanguage == "en", onClick = { onUiLanguageChange("en") },
+                    label = { Text("English") })
+                FilterChip(selected = uiLanguage == "gd", onClick = { onUiLanguageChange("gd") },
+                    label = { Text("Gàidhlig (Alba)") })
+            }
+            Text("Changes the PersonalMedia interface only. Artwork metadata and audio/subtitle language preferences stay independent.",
                 color = muted, style = MaterialTheme.typography.bodySmall)
         }
         SettingsBlock("LANGUAGES", "Audio and subtitle preferences") {
