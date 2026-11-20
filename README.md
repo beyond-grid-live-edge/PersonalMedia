@@ -1,5 +1,7 @@
 # PersonalMedia — Android
 
+**English** · [Gàidhlig (Alba)](README.gd.md) · [Scottish Gaelic GPLv3 guide](LICENSE.gd.md)
+
 **PersonalMedia for Android** is an independent native Android port of the PersonalMedia HarmonyOS application. It combines a local media library, Stremio, UK Freeview, US Internet TV and persistent media downloads.
 
 **Current source:** STR-7D (November 2026). Native Kotlin/Jetpack Compose + Media3, with JNI/C++ for the August tuner, native MPV and hash-verified libtorrent streams. **Development source, not a published APK release.**
@@ -78,6 +80,6 @@ The importer checks the inner SHA-256 and ABI-specific native archives. Already 
 
 Copyright © 2026 **Shaun Hargadon**.
 
-The original PersonalMedia Android code that Shaun Hargadon owns in this repository is licensed under the **GNU General Public License version 3.0 only (GPL-3.0-only)**. See the full [LICENSE](LICENSE) text. Modifications and redistribution of GPL-covered material must follow that licence's terms.
+The original PersonalMedia Android code that Shaun Hargadon owns in this repository is licensed under the **GNU General Public License version 3.0 only (GPL-3.0-only)**. See the full [LICENSE](LICENSE) text. For an unofficial Scottish Gaelic explanation, see [LICENSE.gd.md](LICENSE.gd.md). Modifications and redistribution of GPL-covered material must follow that licence's terms.
 
 This project licence does **not** relicense or grant extra rights to third-party components, including native MPV/FFmpeg, libtorrent, Boost, OpenSSL, Android libraries, TV streams, artwork, or metadata. Their respective upstream licences and service terms continue to apply. The separate HarmonyOS project is not covered by this repository's licence merely because this Android port is published.
