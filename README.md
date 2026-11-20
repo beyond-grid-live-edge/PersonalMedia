@@ -20,6 +20,12 @@
 
 User-reported **Honor 90** testing has confirmed real libtorrent video **and audio**, seeking, torrent cancel/source switching, a completed Backrooms torrent download and US channel playback in Media3. Later STR-7 features (especially backup/restore and per-title track memory) still require targeted on-device validation. Code presence alone is not a release guarantee.
 
+## Recommended devices
+
+**Android tablet or other large-screen Android device recommended**, ideally used in landscape orientation. PersonalMedia is a **tablet-first media centre**, like the original HarmonyOS edition: the Sky-style Freeview guide, local library shelves, Stremio catalog and multi-panel playback controls are designed to benefit from a larger display.
+
+**Phones are not the primary layout target.** Core streaming and download features have been tested on an Honor 90, but smaller portrait screens may feel cramped and have not received the same interface optimisation as tablets. This is a recommendation, **not** a claim that phones cannot run the app.
+
 ## Build
 
 This repository contains the **full first-party source**, but **not** native MPV libraries, ABI-specific libtorrent/Boost/OpenSSL static archives, device-specific signing credentials or your app data. A fresh clone needs setup before compiling the torrent-enabled APK.
