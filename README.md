@@ -48,7 +48,7 @@ Successful output: `app/build/outputs/apk/debug/app-debug.apk`. **Do not install
 
 Application ID: `com.personalmedia.android`. The library uses Android's Storage Access Framework instead of broad file-system permissions. Stremio credentials and signed stream links are excluded from portable backups; **JSON backups are not encrypted** and can contain media titles and document URIs. Torrent peers can see your IP address. Use only authorised media and providers.
 
-Native MPV/FFmpeg, libtorrent, Boost, OpenSSL and TV/metadata providers have separate licences and terms; review them before redistribution. **No project licence is declared here.** Historical milestone notes may contain outdated limitations or errors: use the current README and build guide for this snapshot.
+Native MPV/FFmpeg, libtorrent, Boost, OpenSSL and TV/metadata providers have separate licences and terms; review them before redistribution. Historical milestone notes may contain outdated limitations or errors: use the current README and build guide for this snapshot.
 
 ## Download our Android ARM64 libtorrent dependencies
 
@@ -67,3 +67,11 @@ To import the downloaded **outer** ZIP into an existing PersonalMedia checkout a
 ```
 
 The importer checks the inner SHA-256 and ABI-specific native archives. Already installed these libraries? Build again with `.\tools\STR5C-Build-With-Cloud-Libraries.ps1 -Arm64Only` instead. See [BUILDING.md](docs/BUILDING.md) for prerequisites and MPV staging.
+
+## Open-source licence
+
+Copyright © 2026 **Shaun Hargadon**.
+
+The original PersonalMedia Android code that Shaun Hargadon owns in this repository is licensed under the **GNU General Public License version 3.0 only (GPL-3.0-only)**. See the full [LICENSE](LICENSE) text. Modifications and redistribution of GPL-covered material must follow that licence's terms.
+
+This project licence does **not** relicense or grant extra rights to third-party components, including native MPV/FFmpeg, libtorrent, Boost, OpenSSL, Android libraries, TV streams, artwork, or metadata. Their respective upstream licences and service terms continue to apply. The separate HarmonyOS project is not covered by this repository's licence merely because this Android port is published.
